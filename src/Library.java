@@ -22,8 +22,11 @@ public class Library {
 		}
 	}
 	
-	public int getCountOfCopies(String givenTitle){
-		return library.stream().filter(o -> o.getTitle().equals(givenTitle)).collect(Collectors.toList()).size();
+	public int getCountOfAvailableCopies(String givenTitle){
+		return library.stream().filter(o -> o.getTitle().equals(givenTitle)).filter(o -> o.isAvailable() == true).collect(Collectors.toList()).size();
+	}
+	public int getCountOfLentCopies(String givenTitle){
+		return library.stream().filter(o -> o.getTitle().equals(givenTitle)).filter(o -> o.isAvailable() == false).collect(Collectors.toList()).size();
 	}
 	
 	public void addBook(String newTitle, int newYear, String newAuthor){
@@ -55,15 +58,14 @@ public class Library {
 	
 	public String[] listAllBooks(){
 		List<Book> distinctList = library.stream().filter(distinctByKey(o -> o.getTitle())).collect(Collectors.toList());
-		
-		//Observable<List<Book>> distinctList1 = Observable.from(library).distinct(o -> o.getTitle());
-		
-		String[] allBooks = new String[library.size()];
+			
+		String[] allBooks = new String[distinctList.size()];
 		int i=0;
 		
 		for(Book element : distinctList){
-			allBooks[i] = element.getTitle()+"\t"+element.getYear()+"\t"+element.getAuthor()+"\tavailable copies: " + getCountOfCopies(element.getTitle());
-			System.out.println(allBooks[i]);
+			allBooks[i] = element.getTitle()+"\t"+element.getYear()+"\t"+element.getAuthor()+"\tavailable copies: " + getCountOfAvailableCopies(element.getTitle());
+			if (getCountOfLentCopies(element.getTitle()) != 0)
+				allBooks[i] += "\tlent copies: " + getCountOfLentCopies(element.getTitle());
 			i++;
 		}
 		return allBooks;

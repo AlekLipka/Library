@@ -60,16 +60,20 @@ public class UnitTests {
 
 	@Test
 	public final void testListAllBooks() {
-		library.addBook("Lord of The Rings The Two Towers", 2002, "J.R.R. Tolkien");
+		library.addBook("Lord of The Rings The Two Towers", 2002, "J.R.R. Tolkien"); //adding the same book to library
+		library.addBook("Lord of The Rings The Two Towers", 2002, "J.R.R. Tolkien"); //adding the same book to library
+		
+		UUID id = bookList.get(0).getID();
+		library.lendBook(id, "Baba Jaga");
 		
 		String string[] = library.listAllBooks();
 		
-		assertEquals(4, bookList.size());
-		assertEquals(3, string.length);
+		assertEquals(5, bookList.size());
+		assertEquals(3, string.length); //checking if the result is distinct
 		
 		for(String s : string)
-			System.out.println(s);		
-		assertEquals("Lord of The Rings The Two Towers	2002	J.R.R. Tolkien	available copies: 2\nPan Tadeusz	2004	Adam Mickiewicz	available copies: 1\nHarry Potter and the Goblet of Fire	2011	J.K. Rowling	available copies: 1", outContent.toString());
+			System.out.print(s + " ");		
+		assertEquals("Lord of The Rings The Two Towers	2002	J.R.R. Tolkien	available copies: 2	lent copies: 1 Pan Tadeusz	2004	Adam Mickiewicz	available copies: 1 Harry Potter and the Goblet of Fire	2011	J.K. Rowling	available copies: 1 ", outContent.toString()); //checking amount of available and lent copies
 	}
 
 	@Test
