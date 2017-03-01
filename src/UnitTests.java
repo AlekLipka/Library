@@ -2,7 +2,6 @@ import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,15 +11,25 @@ import org.junit.Test;
 
 public class UnitTests {
 
-	@Test
-	public final void testAddBook() {
-		Library library = new Library();
+	private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+	private Library library = new Library();
+	private List<Book> bookList;
+	
+	@Before
+	public void setUpStreams() {
+		System.setOut(new PrintStream(outContent));
 		library.addBook("Lord of The Rings The Two Towers", 2002, "J.R.R. Tolkien");
 		library.addBook("Pan Tadeusz", 2004, "Adam Mickiewicz");
 		library.addBook("Harry Potter and the Goblet of Fire", 2011, "J.K. Rowling");
-		
-		List<Library.Book> bookList = library.getBookList();
-		
+		bookList = library.getBookList();
+	}
+	@After
+	public void cleanUpStreams(){
+		System.setOut(null);
+	}
+	
+	@Test
+	public final void testAddBook() {
 		assertEquals("Lord of The Rings The Two Towers" , bookList.get(0).getTitle());
 		assertEquals(2002 , bookList.get(0).getYear());
 		assertEquals("J.R.R. Tolkien" , bookList.get(0).getAuthor());
@@ -40,13 +49,7 @@ public class UnitTests {
 	}
 
 	@Test
-	public final void testDeleteBook() {
-		Library library = new Library();
-		library.addBook("Lord of The Rings The Two Towers", 2002, "J.R.R. Tolkien");
-		library.addBook("Pan Tadeusz", 2004, "Adam Mickiewicz");
-		library.addBook("Harry Potter and the Goblet of Fire", 2011, "J.K. Rowling");
-		
-		List<Library.Book> bookList = library.getBookList();
+	public final void testDeleteBook() {		
 		UUID idToBeDeleted = bookList.get(1).getID();
 	
 		assertTrue(library.deleteBook(idToBeDeleted)); //Deleting book that exist
@@ -57,23 +60,34 @@ public class UnitTests {
 
 	@Test
 	public final void testListAllBooks() {
-		fail("Not yet implemented"); // TODO
+		library.addBook("Lord of The Rings The Two Towers", 2002, "J.R.R. Tolkien");
+		
+		String string[] = library.listAllBooks();
+		
+		assertEquals(4, bookList.size());
+		assertEquals(3, string.length);
+		
+		for(String s : string)
+			System.out.println(s);		
+		assertEquals("Lord of The Rings The Two Towers	2002	J.R.R. Tolkien	available copies: 2\nPan Tadeusz	2004	Adam Mickiewicz	available copies: 1\nHarry Potter and the Goblet of Fire	2011	J.K. Rowling	available copies: 1", outContent.toString());
 	}
 
 	@Test
-	public final void testSearch() {
-		fail("Not yet implemented"); // TODO
+	public final void testSearch() {	
+		assertEquals("J.R.R. Tolkien", library.search("Lord of The Rings The Two Towers", 2002, "J.R.R. Tolkien").get(0).getAuthor()); //search by Title AND Year AND Author
+		assertEquals("J.R.R. Tolkien", library.search("Lord of The Rings The Two Towers", 2002, null).get(0).getAuthor()); //search by Title AND Year
+		assertEquals("J.R.R. Tolkien", library.search("Lord of The Rings The Two Towers", 0, null).get(0).getAuthor()); //search by Title
+		assertEquals("J.R.R. Tolkien", library.search(null, 2002, null).get(0).getAuthor()); //search by Year
+		assertEquals(2002, library.search(null, 0, "J.R.R. Tolkien").get(0).getYear()); //search by Author
+		assertEquals("Lord of The Rings The Two Towers", library.search(null, 2002, "J.R.R. Tolkien").get(0).getTitle()); //search by Year AND Author
+		assertEquals(2002, library.search("Lord of The Rings The Two Towers", 0, "J.R.R. Tolkien").get(0).getYear()); //search by Title AND Author
+		
+		library.addBook("Harry Potter and the Goblet of Fire", 2011, "J.K. Rowling");
+		assertEquals(2, library.search(null, 0, "J.K. Rowling").size()); //checking if both positions were found
 	}
 
 	@Test
 	public final void testLendBook() {
-		Library library = new Library();
-		library.addBook("Lord of The Rings The Two Towers", 2002, "J.R.R. Tolkien");
-		library.addBook("Pan Tadeusz", 2004, "Adam Mickiewicz");
-		library.addBook("Harry Potter and the Goblet of Fire", 2011, "J.K. Rowling");
-		
-		List<Library.Book> bookList = library.getBookList();
-		
 		UUID id = bookList.get(0).getID();
 		library.lendBook(id, "Aleksander Wielki");
 		
@@ -82,7 +96,7 @@ public class UnitTests {
 		assertEquals(1, library.lendBook(id1, "Maciej Wrzenczek")); //book already lent
 		assertEquals(-1, library.lendBook(UUID.randomUUID(), "Maciej Wrzenczek")); //book id wrong
 		
-		//Checking wheter lent books are available
+		//Checking whether lent books are available
 		assertFalse(bookList.get(0).isAvailable());
 		assertFalse(bookList.get(1).isAvailable());
 		assertTrue(bookList.get(2).isAvailable());
@@ -92,27 +106,9 @@ public class UnitTests {
 		assertEquals("Kasia Mroz", bookList.get(1).getBorrower());
 		assertEquals(null, bookList.get(2).getBorrower());
 	}
-	
-	private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-	
-	@Before
-	public void setUpStreams() {
-		System.setOut(new PrintStream(outContent));
-	}
-	@After
-	public void cleanUpStreams(){
-		System.setOut(null);
-	}
 
 	@Test
 	public final void testViewBooksDetails() {
-		Library library = new Library();
-		library.addBook("Lord of The Rings The Two Towers", 2002, "J.R.R. Tolkien");
-		library.addBook("Pan Tadeusz", 2004, "Adam Mickiewicz");
-		library.addBook("Harry Potter and the Goblet of Fire", 2011, "J.K. Rowling");
-		
-		List<Library.Book> bookList = library.getBookList();
-		
 		UUID id = bookList.get(0).getID();
 		library.lendBook(id, "Aleksander Wielki");
 		

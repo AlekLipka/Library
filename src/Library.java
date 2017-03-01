@@ -1,4 +1,8 @@
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class Library {
 	private ArrayList<Book> library;
@@ -9,75 +13,23 @@ public class Library {
 	
 	public List<Book> getBookList(){ return library; }
 	
-	class Book{
-		private UUID id;
-		private String title;
-		private int year;
-		private String author;
-		private Availibility availbility; 
-					
-		public Book(String newTitle, int newYear, String newAuthor){
-			title = newTitle;
-			year = newYear;
-			author = newAuthor;
-			availbility = new Availibility();
+	public UUID getUniqueID(){ 
+		while(true){
+			UUID id = UUID.randomUUID();
+			//the chance of getting the same id using UUID is extremely low: 1 to hundreds of billions, but still can happen, so we need to check it
+			if (!library.stream().anyMatch(o -> o.getID().equals(id)))
+				return id;
 		}
-		
-		public void setUniqueID(){ 
-			while(true){
-				id = UUID.randomUUID();
-				//the chance of getting the same id using UUID is extremely low: 1 to hundreds of billions, but still can happen, so we need to check it
-				if (!library.stream().anyMatch(o -> o.getID().equals(id)))
-					break;
-			}
-		}
-		public UUID getID(){ return id; }
-		public String getTitle(){ return title; }
-		public int getYear(){ return year; }
-		public String getAuthor(){ return author; }
-		
-		public boolean isAvailable() { 
-			Book book = library.stream().filter(o -> o.getID().equals(id)).findFirst().get();
-			if (book.availbility.getIsLent())
-				return false;
-			else
-				return true;
-		}
-		
-		public String getBorrower() { 
-			Book book = library.stream().filter(o -> o.getID().equals(id)).findFirst().get();
-			if (book.availbility.getIsLent())
-				return book.availbility.getBorrowerA();
-			else
-				return null;
-		}
-		
-		private void lendBook(String person){
-			availbility.lentBook(person);
-		}
-		
-		class Availibility{
-			private boolean isLent;
-			private String person;
-			
-			private Availibility(){
-				isLent = false;
-				person = null;
-			}
-			
-			private void lentBook(String name){
-				isLent = true;
-				person = name;
-			}
-			
-			private boolean getIsLent() { return isLent; }
-			private String getBorrowerA() { return person; }
-		}
+	}
+	
+	public int getCountOfCopies(String givenTitle){
+		return library.stream().filter(o -> o.getTitle().equals(givenTitle)).collect(Collectors.toList()).size();
 	}
 	
 	public void addBook(String newTitle, int newYear, String newAuthor){
 		Book book = new Book(newTitle, newYear, newAuthor);		
-		book.setUniqueID();
+		UUID uniqueID = getUniqueID();
+		book.setID(uniqueID);
 		library.add(book);
 	}
 	
@@ -85,8 +37,8 @@ public class Library {
 		if (library.stream().anyMatch(o -> o.getID().equals(id))){
 			Book book = library.stream().filter(o -> o.getID().equals(id)).findFirst().get();
 			
-			//Checking wheter the book is lent
-			if (book.availbility.isLent)
+			//Checking whether the book is lent
+			if (!book.isAvailable())
 				return false;
 			
 			library.remove(book);
@@ -96,23 +48,48 @@ public class Library {
 			return false;		
 	}
 	
+	public static <T> Predicate<T> distinctByKey(Function<? super T,Object> keyExtractor) {
+	    Map<Object,Boolean> seen = new ConcurrentHashMap<>();
+	    return t -> seen.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
+	}
+	
 	public String[] listAllBooks(){
-		//for ()
-		//ArrayList<Book> lib = library.stream().allMatch(o -> o.getTitle().equals(newTitle));
-		//toDo distinct search
+		List<Book> distinctList = library.stream().filter(distinctByKey(o -> o.getTitle())).collect(Collectors.toList());
+		
+		//Observable<List<Book>> distinctList1 = Observable.from(library).distinct(o -> o.getTitle());
+		
 		String[] allBooks = new String[library.size()];
 		int i=0;
-		for(Book element : library){
-			allBooks[i] = element.getTitle()+"\t"+element.getYear()+"\t"+element.getAuthor()+"\tavailable copies: ";// + element.getCountOfCopies();
+		
+		for(Book element : distinctList){
+			allBooks[i] = element.getTitle()+"\t"+element.getYear()+"\t"+element.getAuthor()+"\tavailable copies: " + getCountOfCopies(element.getTitle());
+			System.out.println(allBooks[i]);
 			i++;
 		}
 		return allBooks;
 	}
-	public String search(){
-		//toDo
-		//library.stream().filter(o -> o.getTitle().equals(newTile)).filter(o -> o.getYear() == newYear).filter(o -> o.getAuthor().equals(newAuthor));
-		return null;
+	
+	public List<Book> search(String searchTitle, int searchYear, String searchAuthor){	
+		List<Book> foundBooks = new ArrayList<Book>();
+	
+		if (searchTitle != null && searchYear != 0 && searchAuthor != null)
+			foundBooks = library.stream().filter(o -> o.getTitle().equals(searchTitle)).filter(o -> o.getYear() == searchYear).filter(o -> o.getAuthor().equals(searchAuthor)).collect(Collectors.toList());
+		else if (searchTitle == null && searchYear == 0)
+			foundBooks = library.stream().filter(o -> o.getAuthor().equals(searchAuthor)).collect(Collectors.toList());
+		else if (searchTitle == null && searchAuthor == null)
+			foundBooks = library.stream().filter(o -> o.getYear() == searchYear).collect(Collectors.toList());
+		else if (searchYear == 0 && searchAuthor == null)
+			foundBooks = library.stream().filter(o -> o.getTitle() == searchTitle).collect(Collectors.toList());
+		else if (searchTitle == null)
+			foundBooks = library.stream().filter(o -> o.getYear() == searchYear).filter(o -> o.getAuthor().equals(searchAuthor)).collect(Collectors.toList());
+		else if (searchYear == 0)
+			foundBooks = library.stream().filter(o -> o.getTitle() == searchTitle).filter(o -> o.getAuthor().equals(searchAuthor)).collect(Collectors.toList());
+		else if (searchAuthor == null)
+			foundBooks = library.stream().filter(o -> o.getTitle() == searchTitle).filter(o -> o.getYear() == searchYear).collect(Collectors.toList());
+		
+		return foundBooks;
 	}
+	
 	public int lendBook(UUID id, String person){
 		if (library.stream().anyMatch(o -> o.getID().equals(id))){
 			Book book = library.stream().filter(o -> o.getID().equals(id)).findFirst().get();
@@ -126,6 +103,7 @@ public class Library {
 		else
 			return -1;
 	}
+	
 	public String viewBooksDetails(UUID id){
 		if (library.stream().anyMatch(o -> o.getID().equals(id))){
 			Book book = library.stream().filter(o -> o.getID().equals(id)).findFirst().get();
